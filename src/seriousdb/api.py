@@ -10,7 +10,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from threading import Lock
 
-from .cache import Cache, require_db
+from .cache import Cache
 from .config import DB_FILE
 
 __all__ = [
@@ -169,8 +169,7 @@ def exists(key: str) -> bool:
         ``True`` if key exists, ``False`` otherwise.
     """
     _ensure_loaded()
-    with cache.lock:
-        return key in require_db(cache)
+    return cache.exists(key)
 
 
 def get_all() -> dict[str, str]:
@@ -189,8 +188,7 @@ def get_all() -> dict[str, str]:
         If the database file cannot be loaded.
     """
     _ensure_loaded()
-    with cache.lock:
-        return require_db(cache).copy()
+    return cache.get_all()
 
 
 def get_bulk(keys: Iterable[str]) -> dict[str, str]:
@@ -215,9 +213,7 @@ def get_bulk(keys: Iterable[str]) -> dict[str, str]:
         If the database file cannot be loaded.
     """
     _ensure_loaded()
-    with cache.lock:
-        db = require_db(cache)
-        return {key: db[key] for key in keys if key in db}
+    return cache.get_bulk(keys)
 
 
 def count() -> int:
@@ -236,5 +232,4 @@ def count() -> int:
         If the database file cannot be loaded.
     """
     _ensure_loaded()
-    with cache.lock:
-        return len(require_db(cache))
+    return cache.count()

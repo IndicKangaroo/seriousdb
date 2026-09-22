@@ -5,6 +5,7 @@ import pytest
 from pytest import MonkeyPatch
 
 from seriousdb.cache import Cache
+from seriousdb.exceptions import ServiceUnavailableError
 
 
 def boom(*args, **kwargs):
@@ -108,3 +109,92 @@ def test_load_corrupt_backup_with_existing_collision_suffixes(
 
     assert cache.db == {}
     assert json.loads(db_file.read_bytes()) == {}
+
+
+def test_cache_unloaded_operations_raise_service_unavailable():
+    cache = Cache()
+
+    with pytest.raises(ServiceUnavailableError):
+        cache.exists("key")
+
+    with pytest.raises(ServiceUnavailableError):
+        _ = "key" in cache
+
+    with pytest.raises(ServiceUnavailableError):
+        cache.count()
+
+    with pytest.raises(ServiceUnavailableError):
+        _ = len(cache)
+
+    with pytest.raises(ServiceUnavailableError):
+        cache.get_all()
+
+    with pytest.raises(ServiceUnavailableError):
+        cache.get_bulk(["key"])
+
+
+def test_cache_exists_and_contains(tmp_path: Path):
+    db_file = tmp_path / ".sdb"
+    cache = Cache()
+    cache.load(str(db_file))
+
+    assert not cache.exists("name")
+    assert "name" not in cache
+
+    cache.insert("name", "Alice")
+
+    assert cache.exists("name")
+    assert "name" in cache
+
+
+def test_cache_count_and_len(tmp_path: Path):
+    db_file = tmp_path / ".sdb"
+    cache = Cache()
+    cache.load(str(db_file))
+
+    assert cache.count() == 0
+    assert len(cache) == 0
+
+    cache.insert("a", "1")
+    cache.insert("b", "2")
+
+    assert cache.count() == 2
+    assert len(cache) == 2
+
+    cache.delete("a")
+
+    assert cache.count() == 1
+    assert len(cache) == 1
+
+
+def test_cache_get_all_returns_snapshot_copy(tmp_path: Path):
+    db_file = tmp_path / ".sdb"
+    cache = Cache()
+    cache.load(str(db_file))
+    cache.insert("k1", "v1")
+    cache.insert("k2", "v2")
+
+    snapshot = cache.get_all()
+    assert snapshot == {"k1": "v1", "k2": "v2"}
+
+    # Mutating snapshot should not affect cache
+    snapshot["k1"] = "mutated"
+    assert cache.select("k1") == "v1"
+
+
+def test_cache_get_bulk_with_iterable(tmp_path: Path):
+    db_file = tmp_path / ".sdb"
+    cache = Cache()
+    cache.load(str(db_file))
+    cache.insert("k1", "v1")
+    cache.insert("k2", "v2")
+
+    # Works with list
+    assert cache.get_bulk(["k1", "k3"]) == {"k1": "v1"}
+
+    # Works with generator
+    def key_gen():
+        yield "k2"
+        yield "missing"
+
+    assert cache.get_bulk(key_gen()) == {"k2": "v2"}

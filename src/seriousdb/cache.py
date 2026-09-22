@@ -10,6 +10,7 @@ import logging
 import os
 import tempfile
 import time
+from collections.abc import Iterable
 from threading import Lock
 
 from .exceptions import ResourceNotFoundError, ServiceUnavailableError
@@ -127,6 +128,119 @@ class Cache:
             logger.debug("Key not found: %s", key)
             raise ResourceNotFoundError(f"No value set for key {key}")
         return val
+
+    def exists(self, key: str) -> bool:
+        """Return whether `key` exists in the database.
+
+        Parameters
+        ----------
+        key : str
+            Key to look up.
+
+        Returns
+        -------
+        bool
+            ``True`` if `key` exists, ``False`` otherwise.
+
+        Raises
+        ------
+        ServiceUnavailableError
+            If no database has been loaded.
+        """
+        with self.lock:
+            return key in require_db(self)
+
+    def __contains__(self, key: str) -> bool:
+        """Return whether `key` exists in the database.
+
+        Parameters
+        ----------
+        key : str
+            Key to look up.
+
+        Returns
+        -------
+        bool
+            ``True`` if `key` exists, ``False`` otherwise.
+
+        Raises
+        ------
+        ServiceUnavailableError
+            If no database has been loaded.
+        """
+        return self.exists(key)
+
+    def get_all(self) -> dict[str, str]:
+        """Return a snapshot of every key-value pair in the database.
+
+        Returns
+        -------
+        dict of str to str
+            All stored key-value pairs.
+
+        Raises
+        ------
+        ServiceUnavailableError
+            If no database has been loaded.
+        """
+        with self.lock:
+            return require_db(self).copy()
+
+    def get_bulk(self, keys: Iterable[str]) -> dict[str, str]:
+        """Return the values stored under multiple keys.
+
+        Keys that do not exist are omitted from the result.
+
+        Parameters
+        ----------
+        keys : Iterable of str
+            Keys to look up.
+
+        Returns
+        -------
+        dict of str to str
+            A key-value pair for each requested key that exists in the database.
+
+        Raises
+        ------
+        ServiceUnavailableError
+            If no database has been loaded.
+        """
+        key_list = tuple(keys)
+        with self.lock:
+            db = require_db(self)
+            return {key: db[key] for key in key_list if key in db}
+
+    def count(self) -> int:
+        """Return the number of key-value pairs in the database.
+
+        Returns
+        -------
+        int
+            The number of stored key-value pairs.
+
+        Raises
+        ------
+        ServiceUnavailableError
+            If no database has been loaded.
+        """
+        with self.lock:
+            return len(require_db(self))
+
+    def __len__(self) -> int:
+        """Return the number of key-value pairs in the database.
+
+        Returns
+        -------
+        int
+            The number of stored key-value pairs.
+
+        Raises
+        ------
+        ServiceUnavailableError
+            If no database has been loaded.
+        """
+        return self.count()
 
     def load(self, filename: str) -> None:
         """Load the database from `filename`, replacing the current data.
