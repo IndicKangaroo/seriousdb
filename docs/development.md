@@ -168,8 +168,8 @@ examples.
 ## Documentation
 
 The docstrings above are the source for a generated, docstring-level API reference committed at
-[`docs/reference/`](reference/index.md). It's a companion to the hand-written [API
-reference](api.md), built with [Sphinx](https://www.sphinx-doc.org/) and
+[`docs/reference/`](reference/index.md).
+built with [Sphinx](https://www.sphinx-doc.org/) and
 [sphinx-markdown-builder](https://pypi.org/project/sphinx-markdown-builder/) so it renders as plain
 Markdown on GitHub — no hosted docs site required.
 
