@@ -22,8 +22,8 @@ import sys
 sys.path.insert(0, os.path.abspath("../../src"))
 
 project = "seriousdb"
-copyright = "seriousdb contributors"
-author = "seriousdb contributors"
+copyright = "Daniel Hirsch"
+author = "Daniel Hirsch"
 
 extensions = [
     "sphinx.ext.autodoc",
