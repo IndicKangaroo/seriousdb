@@ -18,8 +18,9 @@ PRs that skip this process may be closed without review.
 
 - Format the Python code — see [Formatting](development.md#formatting).
 - Follow the [docstring conventions](development.md#docstrings).
-- If you add or change a public function, update [the API reference](api.md) and add or adjust tests
-  to cover the new behavior.
+- If you add or change a public function, update [the API reference](api.md), add or adjust tests to
+  cover the new behavior, and [regenerate the generated reference](development.md#documentation) —
+  CI checks it's not stale.
 
 Commits are always run pre-commit to enforce `uv lock`, `type check` ,`pytest` , `linting`,
 `formatting` and `conventional commit`

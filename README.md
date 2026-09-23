@@ -70,7 +70,7 @@ Set configuration before importing `seriousdb`.
 
 ## Documentation
 
-- [API reference](docs/api.md)
+- [API reference](docs/reference/index.md)
 - [Architecture](docs/architecture.md)
 - [Development guide](docs/development.md)
 - [Persistence](docs/persistence.md)

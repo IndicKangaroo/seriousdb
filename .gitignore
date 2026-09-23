@@ -70,7 +70,10 @@ instance/
 .scrapy
 
 # Sphinx documentation
+# docs/reference/ (the generated Markdown) is committed on purpose so it
+# renders on GitHub; only the intermediate build artifacts are ignored.
 docs/_build/
+docs/_sphinx/generated/
 
 # PyBuilder
 .pybuilder/

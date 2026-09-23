@@ -164,3 +164,41 @@ def select(self, key: str) -> str:
 
 See [`cache.py`](../src/seriousdb/cache.py) and [`api.py`](../src/seriousdb/api.py) for more
 examples.
+
+## Documentation
+
+The docstrings above are the source for a generated, docstring-level API reference committed at
+[`docs/reference/`](reference/index.md). It's a companion to the hand-written [API
+reference](api.md), built with [Sphinx](https://www.sphinx-doc.org/) and
+[sphinx-markdown-builder](https://pypi.org/project/sphinx-markdown-builder/) so it renders as plain
+Markdown on GitHub — no hosted docs site required.
+
+`docs/reference/` is committed, not gitignored, so it's readable straight from the repo. Don't edit
+files under it by hand: edit the docstring instead and regenerate.
+
+### Regenerate
+
+#### uv
+
+```bash
+uv sync --group docs
+uv run --group docs sphinx-build -b markdown -d docs/_build/doctrees docs/_sphinx docs/reference
+```
+
+#### Nix (in Nix Shell)
+
+```bash
+sphinx-build -b markdown -d docs/_build/doctrees docs/_sphinx docs/reference
+```
+
+Commit any resulting changes under `docs/reference/` along with your docstring change. CI (see
+[`.github/workflows/docs.yml`](../.github/workflows/docs.yml)) rebuilds it and fails the check if
+the committed output doesn't match, so a stale reference is caught before merge.
+
+### Adding a module
+
+`docs/_sphinx/index.rst` lists the modules that get a generated page, currently `seriousdb.api` and
+`seriousdb.exceptions` — the two modules [architecture.md](architecture.md) calls out as public. To
+add another, add its dotted path to the `autosummary` list in that file and regenerate; the page
+layout itself comes from the template at
+[`docs/_sphinx/_templates/autosummary/module.rst`](_sphinx/_templates/autosummary/module.rst).

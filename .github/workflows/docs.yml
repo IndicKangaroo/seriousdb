@@ -1,0 +1,45 @@
+name: Docs
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  reference:
+    name: Generated API reference is up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group docs
+
+      - name: Build the API reference
+        run: >
+          uv run sphinx-build -b markdown -W
+          -d docs/_build/doctrees docs/_sphinx docs/_build/reference
+
+      - name: Diff against the committed docs/reference
+        run: |
+          if ! diff -rq docs/_build/reference docs/reference; then
+            echo
+            echo "docs/reference is out of date with the docstrings in src/seriousdb."
+            echo "Regenerate it locally and commit the result:"
+            echo
+            echo "  uv run --group docs sphinx-build -b markdown -d docs/_build/doctrees docs/_sphinx docs/reference"
+            echo
+            exit 1
+          fi
