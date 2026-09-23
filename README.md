@@ -47,7 +47,8 @@ seriousdb.set("name", "Alice")
 print(seriousdb.get("name"))
 ```
 
-The database is loaded on first use. See the [API reference](docs/api.md) for supported operations
+The database is loaded on first use. See the [API
+reference](docs/reference/generated/seriousdb.api.md) for supported operations
 and [persistence](docs/persistence.md) for file handling and concurrency limits.
 
 ## Configuration
