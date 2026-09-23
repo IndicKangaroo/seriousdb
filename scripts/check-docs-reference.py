@@ -9,11 +9,10 @@ Used by both .github/workflows/docs.yml and the "docs-reference" hook in
 from __future__ import annotations
 
 import filecmp
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
-
-from sphinx.cmd.build import build_main
 
 ROOT = Path(__file__).resolve().parent.parent
 SPHINX_SRC = ROOT / "docs" / "_sphinx"
@@ -63,11 +62,22 @@ def main() -> int:
         built = Path(scratch) / "reference"
         doctrees = Path(scratch) / "doctrees"
 
-        exit_code = build_main(
-            ["-b", "markdown", "-W", "-d", str(doctrees), str(SPHINX_SRC), str(built)]
+        result = subprocess.run(
+            [
+                "sphinx-build",
+                "-b",
+                "markdown",
+                "-W",
+                "-d",
+                str(doctrees),
+                str(SPHINX_SRC),
+                str(built),
+            ],
+            check=False,
         )
-        if exit_code != 0:
-            return exit_code
+
+        if result.returncode != 0:
+            return result.returncode
 
         mismatches = sorted(_diff(filecmp.dircmp(built, REFERENCE)))
 
