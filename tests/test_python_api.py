@@ -1,6 +1,7 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from pytest import MonkeyPatch
@@ -198,3 +199,35 @@ def test_concurrent_sets(db_file):
 
     for number in range(10):
         assert api.get(f"key_{number}") == f"value_{number}"
+
+
+def test_query_functions_delegate_to_cache_methods(db_file):
+    with patch.object(api.cache, "exists", return_value=True) as mock_exists:
+        assert api.exists("name") is True
+        mock_exists.assert_called_once_with("name")
+
+    with patch.object(api.cache, "get_all", return_value={"k": "v"}) as mock_get_all:
+        assert api.get_all() == {"k": "v"}
+        mock_get_all.assert_called_once_with()
+
+    with patch.object(api.cache, "get_bulk", return_value={"k": "v"}) as mock_get_bulk:
+        assert api.get_bulk(["k"]) == {"k": "v"}
+        mock_get_bulk.assert_called_once_with(["k"])
+
+    with patch.object(api.cache, "count", return_value=3) as mock_count:
+        assert api.count() == 3
+        mock_count.assert_called_once_with()
+
+
+def test_query_functions_do_not_acquire_cache_lock_directly(db_file):
+    with patch.object(api.cache, "lock") as mock_lock:
+        with patch.object(api.cache, "exists"):
+            api.exists("name")
+        with patch.object(api.cache, "get_all"):
+            api.get_all()
+        with patch.object(api.cache, "get_bulk"):
+            api.get_bulk(["name"])
+        with patch.object(api.cache, "count"):
+            api.count()
+
+    mock_lock.__enter__.assert_not_called()

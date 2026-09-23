@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pytest import MonkeyPatch
@@ -487,3 +488,114 @@ def test_compaction_threshold_counts_replayed_writes_across_restart(db_path):
     assert reloaded.wal is not None
     with open(reloaded.wal.filename, "rb") as f:
         assert f.read() == b""
+
+
+def test_cache_unloaded_operations_raise_service_unavailable():
+    cache = Cache()
+
+    with pytest.raises(ServiceUnavailableError):
+        cache.exists("key")
+
+    with pytest.raises(ServiceUnavailableError):
+        _ = "key" in cache
+
+    with pytest.raises(ServiceUnavailableError):
+        cache.count()
+
+    with pytest.raises(ServiceUnavailableError):
+        _ = len(cache)
+
+    with pytest.raises(ServiceUnavailableError):
+        cache.get_all()
+
+    with pytest.raises(ServiceUnavailableError):
+        cache.get_bulk(["key"])
+
+
+def test_cache_exists_and_contains(cache):
+    assert not cache.exists("name")
+    assert "name" not in cache
+
+    cache.insert("name", "Alice")
+
+    assert cache.exists("name")
+    assert "name" in cache
+
+
+def test_cache_count_and_len(cache):
+    assert cache.count() == 0
+    assert len(cache) == 0
+
+    cache.insert("a", "1")
+    cache.insert("b", "2")
+
+    assert cache.count() == 2
+    assert len(cache) == 2
+
+    cache.delete("a")
+
+    assert cache.count() == 1
+    assert len(cache) == 1
+
+
+def test_cache_get_all_returns_snapshot_copy(cache):
+    cache.insert("k1", "v1")
+    cache.insert("k2", "v2")
+
+    snapshot = cache.get_all()
+    assert snapshot == {"k1": "v1", "k2": "v2"}
+
+    # Mutating snapshot should not affect cache
+    snapshot["k1"] = "mutated"
+    assert cache.select("k1") == "v1"
+
+
+def test_cache_get_bulk_with_iterable(cache):
+    cache.insert("k1", "v1")
+    cache.insert("k2", "v2")
+
+    assert cache.get_bulk(["k1", "k3"]) == {"k1": "v1"}
+
+    def key_gen():
+        yield "k2"
+        yield "missing"
+
+    assert cache.get_bulk(key_gen()) == {"k2": "v2"}
+
+
+def test_cache_query_operations_acquire_lock(cache):
+    mock_lock = MagicMock(wraps=cache.lock)
+    with patch.object(cache, "lock", mock_lock):
+        cache.exists("k")
+        assert mock_lock.__enter__.call_count == 1
+
+    mock_lock = MagicMock(wraps=cache.lock)
+    with patch.object(cache, "lock", mock_lock):
+        cache.get_all()
+        assert mock_lock.__enter__.call_count == 1
+
+    mock_lock = MagicMock(wraps=cache.lock)
+    with patch.object(cache, "lock", mock_lock):
+        cache.get_bulk(["k"])
+        assert mock_lock.__enter__.call_count == 1
+
+    mock_lock = MagicMock(wraps=cache.lock)
+    with patch.object(cache, "lock", mock_lock):
+        cache.count()
+        assert mock_lock.__enter__.call_count == 1
+
+
+def test_cache_get_bulk_materializes_generator_outside_lock(cache):
+    cache.insert("k1", "v1")
+
+    yielded_while_unlocked = []
+
+    def key_gen():
+        yielded_while_unlocked.append(not cache.lock.locked())
+        yield "k1"
+        yielded_while_unlocked.append(not cache.lock.locked())
+        yield "missing"
+
+    result = cache.get_bulk(key_gen())
+    assert result == {"k1": "v1"}
+    assert yielded_while_unlocked == [True, True]
