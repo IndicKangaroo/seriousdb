@@ -51,7 +51,7 @@ repos:
 
       - id: docs-reference
         name: docs-reference
-        entry: uv run --locked --group docs scripts/check-docs-reference.py
+        entry: uv run --locked --group docs scripts/docs-reference.py --check
         language: system
         pass_filenames: false
         stages: [pre-commit]

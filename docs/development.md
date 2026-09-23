@@ -182,13 +182,13 @@ files under it by hand: edit the docstring instead and regenerate.
 
 ```bash
 uv sync --group docs
-uv run --group docs sphinx-build -b markdown -d docs/_build/doctrees docs/_sphinx docs/reference
+uv run --group docs python scripts/docs-reference.py
 ```
 
 #### Nix (in Nix Shell)
 
 ```bash
-sphinx-build -b markdown -d docs/_build/doctrees docs/_sphinx docs/reference
+python scripts/docs-reference.py
 ```
 
 Commit any resulting changes under `docs/reference/` along with your docstring change. CI (see
