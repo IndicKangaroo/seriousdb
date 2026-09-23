@@ -2,8 +2,7 @@
 
 Synchronous Python API of seriousdb.
 
-This module is the storage layer of seriousdb: other Python projects can
-import the package and call the functions exported here directly.
+This module is the storage layer of seriousdb: other Python projects can import the package and call the functions exported here directly.
 
 All functions are thread-safe.
 
@@ -84,8 +83,7 @@ The database file is loaded automatically on first use.
 
 Return the values stored under multiple keys.
 
-Keys that do not exist are omitted from the result.
-The database file is loaded automatically on first use.
+Keys that do not exist are omitted from the result. The database file is loaded automatically on first use.
 
 * **Parameters:**
   **keys** (*Iterable* *of* *str*) – Keys to look up.
@@ -101,8 +99,7 @@ The database file is loaded automatically on first use.
 Return whether a database has been loaded.
 
 * **Returns:**
-  *bool* – `True` if a database file has been loaded,
-  `False` otherwise.
+  *bool* – `True` if a database file has been loaded, `False` otherwise.
 * **Return type:**
   bool
 
@@ -110,14 +107,10 @@ Return whether a database has been loaded.
 
 Load the database from filename, replacing the current data.
 
-If the file does not exist, it is created with an empty database.
-If it is not valid UTF-8 JSON or does not contain a JSON object, it is
-renamed to `<filename>.corrupt-<unix timestamp>` (with a numeric suffix
-if that path already exists) and replaced with an empty database.
+If the file does not exist, it is created with an empty database. If it is not valid UTF-8 JSON or does not contain a JSON object, it is renamed to `<filename>.corrupt-<unix timestamp>` (with a numeric suffix if that path already exists) and replaced with an empty database.
 
 * **Parameters:**
-  **filename** (*str* *or* *Path* *,* *optional*) – Path of the database file.
-  Default to `DB_FILE`.
+  **filename** (*str* *or* *Path* *,* *optional*) – Path of the database file. Default to `DB_FILE`.
 * **Raises:**
   **OSError** – If the file cannot be read, renamed or written.
 

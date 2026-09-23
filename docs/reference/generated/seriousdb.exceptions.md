@@ -11,8 +11,7 @@ Bases: `Exception`
 Base class for expected application errors.
 
 * **Parameters:**
-  **detail** (*str* *,* *optional*) – Human readable description of the error. Defaults to
-  default_detail.
+  **detail** (*str* *,* *optional*) – Human readable description of the error. Defaults to default_detail.
 * **Variables:**
   * **default_detail** (*str*) – Detail used when none is given.
   * **detail** (*str*) – Human readable description of this error.

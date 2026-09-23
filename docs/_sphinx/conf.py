@@ -66,3 +66,4 @@ exclude_patterns = ["_build"]
 
 # -- sphinx-markdown-builder -------------------------------------------------
 markdown_uri_doc_suffix = ".md"
+markdown_flavor = "github"
