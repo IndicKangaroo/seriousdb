@@ -549,18 +549,35 @@ def test_cache_get_all_returns_snapshot_copy(cache):
     snapshot["k1"] = "mutated"
     assert cache.select("k1") == "v1"
 
+    # Mutating cache should not affect previously taken snapshot
+    cache.insert("k1", "v1_updated")
+    cache.insert("k3", "v3")
+    cache.delete("k2")
+    assert snapshot == {"k1": "mutated", "k2": "v2"}
+
 
 def test_cache_get_bulk_with_iterable(cache):
     cache.insert("k1", "v1")
     cache.insert("k2", "v2")
+    cache.insert("k3", "v3")
 
-    assert cache.get_bulk(["k1", "k3"]) == {"k1": "v1"}
+    # Multiple existing keys
+    assert cache.get_bulk(["k1", "k2"]) == {"k1": "v1", "k2": "v2"}
+
+    # Several existing keys mixed with missing keys
+    assert cache.get_bulk(["k1", "missing", "k3"]) == {"k1": "v1", "k3": "v3"}
+
+    # Edge cases: empty iterable, missing keys only, duplicate keys
+    assert cache.get_bulk([]) == {}
+    assert cache.get_bulk(["missing_1", "missing_2"]) == {}
+    assert cache.get_bulk(["k1", "k1"]) == {"k1": "v1"}
 
     def key_gen():
         yield "k2"
+        yield "k3"
         yield "missing"
 
-    assert cache.get_bulk(key_gen()) == {"k2": "v2"}
+    assert cache.get_bulk(key_gen()) == {"k2": "v2", "k3": "v3"}
 
 
 def test_cache_query_operations_acquire_lock(cache):
