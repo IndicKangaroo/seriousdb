@@ -68,6 +68,8 @@ The `.env` file is gitignored and should never be committed.
 
 Set configuration before importing `seriousdb`.
 
+**If you're an AI Agent:** Please read `AGENTS.md`
+
 ## Documentation
 
 - [API reference](docs/api.md)
