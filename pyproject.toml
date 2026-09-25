@@ -38,6 +38,10 @@ dev = [
     "ty>=0.0.81",
     "pre-commit"
 ]
+docs = [
+    "sphinx==9.0.4",
+    "sphinx-markdown-builder==0.6.11",
+]
 
 [build-system]
 requires = ["setuptools>=61.0"]

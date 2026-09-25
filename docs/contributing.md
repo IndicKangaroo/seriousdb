@@ -18,8 +18,9 @@ PRs that skip this process may be closed without review.
 
 - Format the Python code — see [Formatting](development.md#formatting).
 - Follow the [docstring conventions](development.md#docstrings).
-- If you add or change a public function, update [the API reference](api.md) and add or adjust tests
-  to cover the new behavior.
+- If you add or change a public function, add or adjust tests to
+  cover the new behavior, and [regenerate the generated reference](development.md#documentation) —
+  CI checks it's not stale.
 
 Commits are always run pre-commit to enforce `uv lock`, `type check` ,`pytest` , `linting`,
 `formatting` and `conventional commit`
@@ -88,7 +89,7 @@ ______________________________________________________________________
 fix(auth): prevent token refresh race condition
 
 Multiple concurrent API requests were triggering duplicate refresh calls,
-invalidating active sessions. Added a mutex lock around the token 
+invalidating active sessions. Added a mutex lock around the token
 exchange service.
 ```
 
@@ -97,7 +98,7 @@ exchange service.
 ```text
 refactor(database): migrate connection pool to async engine
 
-Replaces the synchronous connection pool to eliminate thread blocking 
+Replaces the synchronous connection pool to eliminate thread blocking
 under high concurrent load.
 
 - Remove SQLAlchemy sync session handlers
@@ -112,6 +113,6 @@ feat(api)!: switch authentication scheme to bearer tokens
 
 Require OAuth2 Bearer tokens in Authorization headers instead of API keys.
 
-BREAKING CHANGE: The `x-api-key` header is no longer accepted. All clients 
+BREAKING CHANGE: The `x-api-key` header is no longer accepted. All clients
 must migrate to `Authorization: Bearer <token>`.
 ```
