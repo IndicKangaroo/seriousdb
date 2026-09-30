@@ -22,6 +22,12 @@ Bases: [`ApplicationError`](#seriousdb.exceptions.ApplicationError)
 
 A requested resource does not exist.
 
+### *exception* SerializationError(detail=None)
+
+Bases: [`ApplicationError`](#seriousdb.exceptions.ApplicationError)
+
+A storage page cannot be serialized or deserialized.
+
 ### *exception* ServiceUnavailableError(detail=None)
 
 Bases: [`ApplicationError`](#seriousdb.exceptions.ApplicationError)
