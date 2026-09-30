@@ -14,6 +14,7 @@ from .storage_format import (
     LEAF_PAGE,
     MAGIC,
     PAGE_HEADER_BASE_FORMAT,
+    PAGE_HEADER_BASE_SIZE,
     PAGE_HEADER_PADDING,
     PAGE_HEADER_SIZE,
     PAGE_SIZE,
@@ -220,7 +221,7 @@ class PageSerializer:
         ) = cast(
             tuple[bytes, int, int, int, int, int],
             struct.unpack(
-                META_HEADER_FORMAT,
+                PAGE_HEADER_FORMAT,
                 data[:PAGE_HEADER_SIZE],
             ),
         )
@@ -234,11 +235,11 @@ class PageSerializer:
         if page_type == INTERNAL_PAGE and next_page_id != 0:
             raise SerializationError("internal page has next-page ID")
 
-        reserved_start = PAGE_HEADER_SIZE
+        reserved_start = PAGE_HEADER_BASE_SIZE
 
         if any(data[reserved_start:PAGE_HEADER_SIZE]):
             raise SerializationError(
-                "extra header bytes must be empty if it contains data it is likely corrupted"
+                "extra header bytes must be empty. if it contains data it is likely corrupted"
             )
 
         cls._validate_header(
