@@ -23,7 +23,18 @@ MAGIC: Final[bytes] = b"SDB\x00"
 
 LEAF_PAGE: Final[bytes] = b"L"
 INTERNAL_PAGE: Final[bytes] = b"I"
+OVERFLOW_PAGE: Final[bytes] = b"O"
 META_PAGE: Final[bytes] = b"M"
+
+
+# -----------------------------------
+# Leaf record value flags.
+# -----------------------------------
+
+INLINE_VALUE: Final[int] = 0
+OVERFLOW_VALUE: Final[int] = 0
+
+OVERFLOW_PAGE_DATA_SIZE: Final[int] = PAGE_SIZE - PAGE_HEADER_SIZE
 
 
 # -----------------------------------
@@ -45,6 +56,22 @@ META_PAGE: Final[bytes] = b"M"
 # The reseerved bytes are intentionally left unused for now. They can
 # eventually hold things such as an LSN or checksum without changing the page
 # size or moving the rest of the page layout.
+
+# -----------------------------------
+# Overflow page layout:
+# -----------------------------------
+#
+#   Offset  Size  Field
+#   0       32    Common page header
+#   32      4064  Overflow data
+#
+# The common header contains:
+#   page_type         = OVERFLOW_PAGE
+#   slot_count        = 0
+#   free_start        = PAGE_HEADER_SIZE
+#   free_end          = PAGE_SIZE
+#   next_page_id      = next overflow page, or 0 for the last page
+#   leftmost_child_id = 4064
 
 PAGE_HEADER_RESERVED_SIZE: Final[int] = 15
 

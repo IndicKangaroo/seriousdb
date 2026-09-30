@@ -6,6 +6,7 @@ import struct
 from typing import Final
 
 from .storage_format import (
+    INLINE_VALUE,
     INTERNAL_PAGE,
     LEAF_PAGE,
     MAGIC,
@@ -40,9 +41,11 @@ SLOT_FORMAT: Final[str] = ">HH"
 #
 # key length    2 bytes
 # value length  4 bytes
+# value flags
+# first overflow page ID
 # key bytes
 # value bytes
-LEAF_RECORD_HEADER_FORMAT: Final[str] = ">HI"
+LEAF_RECORD_HEADER_FORMAT: Final[str] = ">HIBI"
 
 # Internal record:
 #
@@ -348,7 +351,7 @@ class PageSerializer:
         key: bytes,
         value: bytes,
     ) -> bytes:
-        """Serialize a variable-length leaf record."""
+        """Serialize a variable-length inline leaf record."""
         if len(key) > 0xFFFF:
             raise SerializationError("key is too large")
 
@@ -360,6 +363,8 @@ class PageSerializer:
                 LEAF_RECORD_HEADER_FORMAT,
                 len(key),
                 len(value),
+                INLINE_VALUE,
+                0,
             )
             + key
             + value
@@ -399,10 +404,16 @@ class PageSerializer:
         if len(record) < header_size:
             raise SerializationError("leaf record is truncated")
 
-        key_len, value_len = struct.unpack(
+        key_len, value_len, flags, overflow_page_id = struct.unpack(
             LEAF_RECORD_HEADER_FORMAT,
             record[:header_size],
         )
+
+        if flags != INLINE_VALUE:
+            raise SerializationError(f"unsupported leaf record flags: {flags}")
+
+        if overflow_page_id != 0:
+            raise SerializationError("inline leaf record has an overflow page")
 
         expected_length = header_size + key_len + value_len
 
@@ -493,6 +504,9 @@ class PageSerializer:
     ) -> None:
         """Validate page header boundaries."""
         expected_free_start = PAGE_HEADER_SIZE + slot_count * SLOT_SIZE
+
+        if expected_free_start > PAGE_SIZE:
+            raise SerializationError("too many slots for page")
 
         if free_start != expected_free_start:
             raise SerializationError("invalid free-space start")
