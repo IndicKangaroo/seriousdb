@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import struct
-from typing import Final
+from typing import Final, cast
+
+from seriousdb.exceptions import SerializationError
 
 from .storage_format import (
+    FORMAT_VERSION,
     INLINE_VALUE,
     INTERNAL_PAGE,
     LEAF_PAGE,
     MAGIC,
+    PAGE_HEADER_BASE_FORMAT,
+    PAGE_HEADER_PADDING,
     PAGE_HEADER_SIZE,
     PAGE_SIZE,
     SLOT_SIZE,
@@ -26,10 +31,11 @@ from .storage_format import (
 # free_end           2 bytes
 # next_page_id       4 bytes
 # leftmost_child_id  4 bytes
-# reserved          15 bytes
+# reserved          17 bytes
 #
 # Total: 32 bytes.
-PAGE_HEADER_FORMAT: Final[str] = ">cHHHII15x"
+
+PAGE_HEADER_FORMAT: Final[str] = PAGE_HEADER_BASE_FORMAT + f"{PAGE_HEADER_PADDING}x"
 
 # Slot:
 #
@@ -41,8 +47,8 @@ SLOT_FORMAT: Final[str] = ">HH"
 #
 # key length    2 bytes
 # value length  4 bytes
-# value flags
-# first overflow page ID
+# value flags   1 byte
+# first overflow page ID 4 bytes
 # key bytes
 # value bytes
 LEAF_RECORD_HEADER_FORMAT: Final[str] = ">HIBI"
@@ -63,10 +69,6 @@ INTERNAL_RECORD_HEADER_FORMAT: Final[str] = ">HI"
 # total page count
 # free-list head
 META_HEADER_FORMAT: Final[str] = ">4sBHIII"
-
-
-class SerializationError(ValueError):
-    """Raised when a page cannot be serialized or deserialized."""
 
 
 class PageSerializer:
@@ -96,14 +98,29 @@ class PageSerializer:
             raise SerializationError("page 0 is reserved for database metadata")
 
         if node.leaf:
+            if node.children_ids or node.leftmost_child_id != 0:
+                raise SerializationError("leaf nodes cannot have child IDs")
+
+            if not 0 <= node.next_page_id <= 0xFFFFFFFF:
+                raise SerializationError("invalid next page ID")
+
             if len(node.keys) != len(node.values):
                 raise SerializationError(
                     "leaf keys and values must have the same length"
                 )
-        elif len(node.children_ids) != len(node.keys):
-            raise SerializationError(
-                "internal nodes must have one child ID for each key"
-            )
+        else:
+            if node.values or node.next_page_id != 0:
+                raise SerializationError(
+                    "internal nodes cannot have values or a next-page ID"
+                )
+
+            if not 0 <= node.leftmost_child_id <= 0xFFFFFFFF:
+                raise SerializationError("invalid leftmost child ID")
+
+            if len(node.children_ids) != len(node.keys):
+                raise SerializationError(
+                    "internal nodes must have one child ID for each key"
+                )
 
         records: list[bytes] = []
 
@@ -188,6 +205,9 @@ class PageSerializer:
         SerializationError
             If the page is invalid or malformed.
         """
+        if page_id == 0:
+            raise SerializationError("page 0 is reserved for database metadata")
+
         cls._validate_page(data)
 
         (
@@ -197,13 +217,29 @@ class PageSerializer:
             free_end,
             next_page_id,
             leftmost_child_id,
-        ) = struct.unpack(
-            PAGE_HEADER_FORMAT,
-            data[:PAGE_HEADER_SIZE],
+        ) = cast(
+            tuple[bytes, int, int, int, int, int],
+            struct.unpack(
+                META_HEADER_FORMAT,
+                data[:PAGE_HEADER_SIZE],
+            ),
         )
 
         if page_type not in (LEAF_PAGE, INTERNAL_PAGE):
             raise SerializationError(f"unsupported page type: {page_type!r}")
+
+        if page_type == LEAF_PAGE and leftmost_child_id != 0:
+            raise SerializationError("leaf page have leftmost child ID")
+
+        if page_type == INTERNAL_PAGE and next_page_id != 0:
+            raise SerializationError("internal page has next-page ID")
+
+        reserved_start = PAGE_HEADER_SIZE
+
+        if any(data[reserved_start:PAGE_HEADER_SIZE]):
+            raise SerializationError(
+                "extra header bytes must be empty if it contains data it is likely corrupted"
+            )
 
         cls._validate_header(
             slot_count,
@@ -275,8 +311,10 @@ class PageSerializer:
         SerializationError
             If the metadata is invalid.
         """
-        if metadata.format_version < 1:
-            raise SerializationError("format version must be positive")
+        if not 1 <= metadata.format_version <= FORMAT_VERSION:
+            raise SerializationError(
+                f"unsupported format version: {metadata.format_version}"
+            )
 
         if metadata.page_size != PAGE_SIZE:
             raise SerializationError(f"unsupported page size: {metadata.page_size}")
@@ -324,19 +362,21 @@ class PageSerializer:
             root_page_id,
             total_page_count,
             free_list_head,
-        ) = struct.unpack(
-            META_HEADER_FORMAT,
-            data[: struct.calcsize(META_HEADER_FORMAT)],
+        ) = cast(
+            tuple[bytes, int, int, int, int, int],
+            struct.unpack(
+                META_HEADER_FORMAT,
+                data[: struct.calcsize(META_HEADER_FORMAT)],
+            ),
         )
-
         if magic != MAGIC:
             raise SerializationError("invalid SeriousDB magic number")
 
         if page_size != PAGE_SIZE:
             raise SerializationError(f"unsupported page size: {page_size}")
 
-        if format_version < 1:
-            raise SerializationError("unsupported format version")
+        if not 1 <= format_version <= FORMAT_VERSION:
+            raise SerializationError(f"unsupported format version: {format_version}")
 
         return SdbMetadata(
             format_version=format_version,

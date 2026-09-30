@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import struct
 from dataclasses import dataclass
 from typing import Final
 
@@ -32,7 +33,7 @@ META_PAGE: Final[bytes] = b"M"
 # -----------------------------------
 
 INLINE_VALUE: Final[int] = 0
-OVERFLOW_VALUE: Final[int] = 0
+OVERFLOW_VALUE: Final[int] = 1
 
 OVERFLOW_PAGE_DATA_SIZE: Final[int] = PAGE_SIZE - PAGE_HEADER_SIZE
 
@@ -43,17 +44,17 @@ OVERFLOW_PAGE_DATA_SIZE: Final[int] = PAGE_SIZE - PAGE_HEADER_SIZE
 #
 # Common page header:
 #
-#  page_type         1   byte
-#  slot_count        2   bytes
-#  free_start        2   bytes
-#  free_end          2   bytes
-#  next_page_id      4   bytes
+#  page_type          1   byte
+#  slot_count         2   bytes
+#  free_start         2   bytes
+#  free_end           2   bytes
+#  next_page_id       4   bytes
 #  leftmost_child_id  4   bytes
-#  reserved          15  bytes
+#  reserved           17  bytes
 #
-#  Toatl:            32  bytes.
+#  Total:            32  bytes.
 #
-# The reseerved bytes are intentionally left unused for now. They can
+# The reserved bytes are intentionally left unused for now. They can
 # eventually hold things such as an LSN or checksum without changing the page
 # size or moving the rest of the page layout.
 
@@ -71,10 +72,16 @@ OVERFLOW_PAGE_DATA_SIZE: Final[int] = PAGE_SIZE - PAGE_HEADER_SIZE
 #   free_start        = PAGE_HEADER_SIZE
 #   free_end          = PAGE_SIZE
 #   next_page_id      = next overflow page, or 0 for the last page
-#   leftmost_child_id = 4064
+#   leftmost_child_id = 0
 
-PAGE_HEADER_RESERVED_SIZE: Final[int] = 15
+PAGE_HEADER_BASE_FORMAT: Final[str] = ">cHHHII"
 
+PAGE_HEADER_BASE_SIZE: Final[int] = struct.calcsize(PAGE_HEADER_BASE_FORMAT)
+
+PAGE_HEADER_PADDING: Final[int] = PAGE_HEADER_SIZE - PAGE_HEADER_BASE_SIZE
+
+if PAGE_HEADER_PADDING < 0:
+    raise ValueError("page header fields exceed PAGE_HEADER_SIZE")
 
 # -----------------------------------
 # Page 0 metadata
@@ -99,7 +106,7 @@ class SdbMetadata:
 
 @dataclass(slots=True)
 class Node:
-    """In-memory representaion of a B+ tree page."""
+    """In-memory representation of a B+ tree page."""
 
     page_id: int
     leaf: bool
