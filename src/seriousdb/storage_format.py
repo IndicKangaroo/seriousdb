@@ -13,7 +13,7 @@ PAGE_SIZE: Final[int] = 4096
 PAGE_HEADER_SIZE: Final[int] = 32
 SLOT_SIZE: Final[int] = 4
 
-FORAMT_VERSION: Final[int] = 1
+FORMAT_VERSION: Final[int] = 1
 MAGIC: Final[bytes] = b"SDB\x00"
 
 

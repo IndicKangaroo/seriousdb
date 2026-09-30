@@ -148,7 +148,7 @@ class PageSerializer:
                 slot.length,
             )
 
-        page_type = LEAF_PAGE if node.leaf else INTERNAL_PAGE
+        page_type: bytes = LEAF_PAGE if node.leaf else INTERNAL_PAGE
 
         header = struct.pack(
             PAGE_HEADER_FORMAT,
@@ -208,10 +208,10 @@ class PageSerializer:
             free_end,
         )
 
-        slots = cls._read_slots(data, slot_count)
+        slots: list[Slot] = cls._read_slots(data, slot_count)
 
+        keys: list[bytes] = []
         if page_type == LEAF_PAGE:
-            keys: list[bytes] = []
             values: list[bytes] = []
 
             for slot in slots:
@@ -231,8 +231,7 @@ class PageSerializer:
                 next_page_id=next_page_id,
             )
 
-        keys = []
-        children_ids = []
+        children_ids: list[int] = []
 
         for slot in slots:
             key, child_id = cls._deserialize_internal_record(
@@ -279,7 +278,7 @@ class PageSerializer:
         if metadata.page_size != PAGE_SIZE:
             raise SerializationError(f"unsupported page size: {metadata.page_size}")
 
-        header = struct.pack(
+        header: bytes = struct.pack(
             META_HEADER_FORMAT,
             MAGIC,
             metadata.format_version,
@@ -393,9 +392,9 @@ class PageSerializer:
         slot: Slot,
     ) -> tuple[bytes, bytes]:
         """Deserialize a leaf record."""
-        record = data[slot.offset : slot.offset + slot.length]
+        record: bytes = data[slot.offset : slot.offset + slot.length]
 
-        header_size = struct.calcsize(LEAF_RECORD_HEADER_FORMAT)
+        header_size: int = struct.calcsize(LEAF_RECORD_HEADER_FORMAT)
 
         if len(record) < header_size:
             raise SerializationError("leaf record is truncated")
@@ -410,8 +409,8 @@ class PageSerializer:
         if expected_length != slot.length:
             raise SerializationError("invalid leaf record length")
 
-        key_start = header_size
-        value_start = key_start + key_len
+        key_start: int = header_size
+        value_start: int = key_start + key_len
 
         return (
             bytes(record[key_start:value_start]),
@@ -426,7 +425,7 @@ class PageSerializer:
         """Deserialize an internal record."""
         record = data[slot.offset : slot.offset + slot.length]
 
-        header_size = struct.calcsize(INTERNAL_RECORD_HEADER_FORMAT)
+        header_size: int = struct.calcsize(INTERNAL_RECORD_HEADER_FORMAT)
 
         if len(record) < header_size:
             raise SerializationError("internal record is truncated")
