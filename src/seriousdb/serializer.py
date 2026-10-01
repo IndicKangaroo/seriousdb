@@ -12,13 +12,17 @@ from .storage_format import (
     FORMAT_VERSION,
     INLINE_VALUE,
     INTERNAL_PAGE,
+    INTERNAL_RECORD_HEADER_FORMAT,
     LEAF_PAGE,
+    LEAF_RECORD_HEADER_FORMAT,
     MAGIC,
+    META_HEADER_FORMAT,
     PAGE_HEADER_BASE_FORMAT,
     PAGE_HEADER_BASE_SIZE,
     PAGE_HEADER_PADDING,
     PAGE_HEADER_SIZE,
     PAGE_SIZE,
+    SLOT_FORMAT,
     SLOT_SIZE,
     Node,
     SdbMetadata,
@@ -38,40 +42,6 @@ from .storage_format import (
 # Total: 32 bytes.
 
 PAGE_HEADER_FORMAT: Final[str] = PAGE_HEADER_BASE_FORMAT + f"{PAGE_HEADER_PADDING}x"
-
-# Slot:
-#
-# record offset  2 bytes
-# record length  2 bytes
-SLOT_FORMAT: Final[str] = ">HH"
-
-# Leaf record:
-#
-# key length    2 bytes
-# value length  4 bytes
-# value flags   1 byte
-# first overflow page ID 4 bytes
-# key bytes
-# value bytes
-LEAF_RECORD_HEADER_FORMAT: Final[str] = ">HIBI"
-
-# Internal record:
-#
-# key length    2 bytes
-# child page ID 4 bytes
-# key bytes
-INTERNAL_RECORD_HEADER_FORMAT: Final[str] = ">HI"
-
-# Page 0 metadata:
-#
-# magic
-# format version
-# page size
-# root page ID
-# total page count
-# free-list head
-META_HEADER_FORMAT: Final[str] = ">4sBHIII"
-
 
 class PageSerializer:
     """Serialize and deserialize SeriousDB pages."""
@@ -446,10 +416,13 @@ class PageSerializer:
         if len(record) < header_size:
             raise SerializationError("leaf record is truncated")
 
-        key_len, value_len, flags, overflow_page_id = struct.unpack(
-            LEAF_RECORD_HEADER_FORMAT,
-            record[:header_size],
-        )
+        key_len, value_len, flags, overflow_page_id = cast(
+                tuple[int, int, int, int],
+                struct.unpack(
+                    LEAF_RECORD_HEADER_FORMAT,
+                    record[:header_size],
+                    )
+                )
 
         if flags != INLINE_VALUE:
             raise SerializationError(f"unsupported leaf record flags: {flags}")
@@ -483,10 +456,13 @@ class PageSerializer:
         if len(record) < header_size:
             raise SerializationError("internal record is truncated")
 
-        key_len, child_id = struct.unpack(
-            INTERNAL_RECORD_HEADER_FORMAT,
-            record[:header_size],
-        )
+        key_len, child_id = cast(
+                tuple[int, UInt32],
+                struct.unpack(
+                    INTERNAL_RECORD_HEADER_FORMAT,
+                    record[:header_size],
+                    )
+                )
 
         expected_length = header_size + key_len
 
@@ -510,10 +486,13 @@ class PageSerializer:
         for index in range(slot_count):
             offset = PAGE_HEADER_SIZE + index * SLOT_SIZE
 
-            record_offset, record_length = struct.unpack(
-                SLOT_FORMAT,
-                data[offset : offset + SLOT_SIZE],
-            )
+            record_offset, record_length = cast(
+                    tuple[int, int],
+                    struct.unpack(
+                        SLOT_FORMAT,
+                        data[offset : offset + SLOT_SIZE],
+                        )
+                    )
 
             if (
                 record_offset < PAGE_HEADER_SIZE

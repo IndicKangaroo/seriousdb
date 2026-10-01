@@ -85,9 +85,42 @@ PAGE_HEADER_PADDING: Final[int] = PAGE_HEADER_SIZE - PAGE_HEADER_BASE_SIZE
 if PAGE_HEADER_PADDING < 0:
     raise ValueError("page header fields exceed PAGE_HEADER_SIZE")
 
+# Slot:
+#
+# record offset  2 bytes
+# record length  2 bytes
+SLOT_FORMAT: Final[str] = ">HH"
+
+# Leaf record:
+#
+# key length    2 bytes
+# value length  4 bytes
+# value flags   1 byte
+# first overflow page ID 4 bytes
+# key bytes
+# value bytes
+LEAF_RECORD_HEADER_FORMAT: Final[str] = ">HIBI"
+
+# Internal record:
+#
+# key length    2 bytes
+# child page ID 4 bytes
+# key bytes
+INTERNAL_RECORD_HEADER_FORMAT: Final[str] = ">HI"
+
+
 # -----------------------------------
 # Page 0 metadata
 # -----------------------------------
+# magic
+# format version
+# page size
+# root page ID
+# total page count
+# free-list head
+
+META_HEADER_FORMAT: Final[str] = ">4sBHIII"
+
 
 
 @dataclass(slots=True)
