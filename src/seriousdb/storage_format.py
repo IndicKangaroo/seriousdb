@@ -122,7 +122,6 @@ INTERNAL_RECORD_HEADER_FORMAT: Final[str] = ">HI"
 META_HEADER_FORMAT: Final[str] = ">4sBHIII"
 
 
-
 @dataclass(slots=True)
 class SdbMetadata:
     """Metadata stored in page zero."""

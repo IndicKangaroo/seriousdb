@@ -43,6 +43,7 @@ from .storage_format import (
 
 PAGE_HEADER_FORMAT: Final[str] = PAGE_HEADER_BASE_FORMAT + f"{PAGE_HEADER_PADDING}x"
 
+
 class PageSerializer:
     """Serialize and deserialize SeriousDB pages."""
 
@@ -417,12 +418,12 @@ class PageSerializer:
             raise SerializationError("leaf record is truncated")
 
         key_len, value_len, flags, overflow_page_id = cast(
-                tuple[int, int, int, int],
-                struct.unpack(
-                    LEAF_RECORD_HEADER_FORMAT,
-                    record[:header_size],
-                    )
-                )
+            tuple[int, int, int, int],
+            struct.unpack(
+                LEAF_RECORD_HEADER_FORMAT,
+                record[:header_size],
+            ),
+        )
 
         if flags != INLINE_VALUE:
             raise SerializationError(f"unsupported leaf record flags: {flags}")
@@ -457,12 +458,12 @@ class PageSerializer:
             raise SerializationError("internal record is truncated")
 
         key_len, child_id = cast(
-                tuple[int, UInt32],
-                struct.unpack(
-                    INTERNAL_RECORD_HEADER_FORMAT,
-                    record[:header_size],
-                    )
-                )
+            tuple[int, UInt32],
+            struct.unpack(
+                INTERNAL_RECORD_HEADER_FORMAT,
+                record[:header_size],
+            ),
+        )
 
         expected_length = header_size + key_len
 
@@ -487,12 +488,12 @@ class PageSerializer:
             offset = PAGE_HEADER_SIZE + index * SLOT_SIZE
 
             record_offset, record_length = cast(
-                    tuple[int, int],
-                    struct.unpack(
-                        SLOT_FORMAT,
-                        data[offset : offset + SLOT_SIZE],
-                        )
-                    )
+                tuple[int, int],
+                struct.unpack(
+                    SLOT_FORMAT,
+                    data[offset : offset + SLOT_SIZE],
+                ),
+            )
 
             if (
                 record_offset < PAGE_HEADER_SIZE
