@@ -6,6 +6,7 @@ import struct
 from typing import Final, cast
 
 from seriousdb.exceptions import SerializationError
+from seriousdb.types import UInt16, UInt32
 
 from .storage_format import (
     FORMAT_VERSION,
@@ -263,12 +264,12 @@ class PageSerializer:
                 values.append(value)
 
             return Node(
-                page_id=page_id,
+                page_id=UInt32(page_id),
                 leaf=True,
                 keys=keys,
                 values=values,
                 children_ids=[],
-                next_page_id=next_page_id,
+                next_page_id=UInt32(next_page_id),
             )
 
         children_ids: list[int] = []
@@ -282,12 +283,12 @@ class PageSerializer:
             children_ids.append(child_id)
 
         return Node(
-            page_id=page_id,
+            page_id=UInt32(page_id),
             leaf=False,
             keys=keys,
             values=[],
-            children_ids=children_ids,
-            leftmost_child_id=leftmost_child_id,
+            children_ids=[UInt32(child_id) for child_id in children_ids],
+            leftmost_child_id=UInt32(leftmost_child_id),
         )
 
     @classmethod
@@ -380,11 +381,11 @@ class PageSerializer:
             raise SerializationError(f"unsupported format version: {format_version}")
 
         return SdbMetadata(
-            format_version=format_version,
-            page_size=page_size,
-            root_page_id=root_page_id,
-            total_page_count=total_page_count,
-            free_list_head=free_list_head,
+            format_version=UInt16(format_version),
+            page_size=UInt16(page_size),
+            root_page_id=UInt32(root_page_id),
+            total_page_count=UInt32(total_page_count),
+            free_list_head=UInt32(free_list_head),
         )
 
     @staticmethod

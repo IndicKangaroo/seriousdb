@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Final
+
+from seriousdb.types import UInt16, UInt32
 
 # -----------------------------------
 # Database format
@@ -92,11 +94,11 @@ if PAGE_HEADER_PADDING < 0:
 class SdbMetadata:
     """Metadata stored in page zero."""
 
-    format_version: int
-    page_size: int
-    root_page_id: int
-    total_page_count: int
-    free_list_head: int
+    format_version: UInt16
+    page_size: UInt16
+    root_page_id: UInt32
+    total_page_count: UInt32
+    free_list_head: UInt32
 
 
 # -----------------------------------
@@ -104,17 +106,22 @@ class SdbMetadata:
 # -----------------------------------
 
 
+def _zero_uint32() -> UInt32:
+    return UInt32(0)
+
+
 @dataclass(slots=True)
 class Node:
     """In-memory representation of a B+ tree page."""
 
-    page_id: int
+    page_id: UInt32
     leaf: bool
     keys: list[bytes]
     values: list[bytes]
-    children_ids: list[int]
-    next_page_id: int = 0
-    leftmost_child_id: int = 0
+    children_ids: list[UInt32]
+    # hacky way to give default value with "function call" to make ruff happpy
+    next_page_id: UInt32 = field(default_factory=_zero_uint32)
+    leftmost_child_id: UInt32 = field(default_factory=_zero_uint32)
 
 
 @dataclass(slots=True)
