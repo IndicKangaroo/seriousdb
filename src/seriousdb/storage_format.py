@@ -6,7 +6,7 @@ import struct
 from dataclasses import dataclass, field
 from typing import Final
 
-from seriousdb.types import UInt16, UInt32
+from seriousdb.types import UInt16, UInt32, UInt8
 
 # -----------------------------------
 # Database format
@@ -126,7 +126,7 @@ META_HEADER_FORMAT: Final[str] = ">4sBHIII"
 class SdbMetadata:
     """Metadata stored in page zero."""
 
-    format_version: UInt16
+    format_version: UInt8
     page_size: UInt16
     root_page_id: UInt32
     total_page_count: UInt32

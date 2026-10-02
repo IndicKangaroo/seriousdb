@@ -18,7 +18,7 @@ from seriousdb.storage_format import (
     Node,
     SdbMetadata,
 )
-from seriousdb.types import UInt16, UInt32
+from seriousdb.types import UInt16, UInt32, UInt8
 
 
 class TestPageSerializer:
@@ -305,7 +305,7 @@ class TestPageSerializer:
 class TestMetadataSerializer:
     def make_metadata(self) -> SdbMetadata:
         return SdbMetadata(
-            format_version=UInt16(FORMAT_VERSION),
+            format_version=UInt8(FORMAT_VERSION),
             page_size=UInt16(PAGE_SIZE),
             root_page_id=UInt32(1),
             total_page_count=UInt32(10),

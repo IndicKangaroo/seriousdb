@@ -6,7 +6,7 @@ import struct
 from typing import Final, cast
 
 from seriousdb.exceptions import SerializationError
-from seriousdb.types import UInt16, UInt32
+from seriousdb.types import UInt16, UInt32, UInt8
 
 from .storage_format import (
     FORMAT_VERSION,
@@ -336,7 +336,7 @@ class PageSerializer:
             total_page_count,
             free_list_head,
         ) = cast(
-            tuple[bytes, int, int, int, int, int],
+            tuple[bytes, UInt8, int, int, int, int],
             struct.unpack(
                 META_HEADER_FORMAT,
                 data[: struct.calcsize(META_HEADER_FORMAT)],
@@ -352,7 +352,7 @@ class PageSerializer:
             raise SerializationError(f"unsupported format version: {format_version}")
 
         return SdbMetadata(
-            format_version=UInt16(format_version),
+            format_version=UInt8(format_version),
             page_size=UInt16(page_size),
             root_page_id=UInt32(root_page_id),
             total_page_count=UInt32(total_page_count),
