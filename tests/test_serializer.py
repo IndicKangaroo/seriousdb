@@ -8,10 +8,13 @@ from seriousdb.storage_format import (
     FORMAT_VERSION,
     INTERNAL_PAGE,
     LEAF_PAGE,
+    LEAF_RECORD_HEADER_FORMAT,
     META_HEADER_FORMAT,
     PAGE_HEADER_BASE_FORMAT,
     PAGE_HEADER_SIZE,
     PAGE_SIZE,
+    SLOT_FORMAT,
+    SLOT_SIZE,
     Node,
     SdbMetadata,
 )
@@ -234,6 +237,56 @@ class TestPageSerializer:
 
         with pytest.raises(SerializationError):
             PageSerializer.deserialize(UInt32(1), bytes(data))
+
+    def test_leaf_next_page_id_round_trip(self) -> None:
+        node = Node(
+            page_id=UInt32(1),
+            leaf=True,
+            keys=[b"a"],
+            values=[b"b"],
+            children_ids=[],
+            next_page_id=UInt32(7),
+        )
+
+        data = PageSerializer.serialize(node)
+        assert PageSerializer.deserialize(UInt32(1), data) == node
+
+    def test_slot_pointing_into_slot_dirctory_is_rejected(self) -> None:
+        node = Node(
+                page_id=UInt32(1),
+                leaf=True,
+                keys=[b"k"],
+                values=[b"v"],
+                children_ids=[],
+                )
+
+        data = bytearray(PageSerializer.serialize(node))
+        # make slot points inside the wrong position (in the slot dirctory)
+        struct.pack_into(SLOT_FORMAT, data, PAGE_HEADER_SIZE, PAGE_HEADER_SIZE, 8)
+        with pytest.raises(SerializationError):
+            PageSerializer.deserialize(UInt32(1), bytes(data))
+
+    def test_exactly_full_page_round_trips(self) -> None:
+        overhead = PAGE_HEADER_SIZE + SLOT_SIZE + struct.calcsize(LEAF_RECORD_HEADER_FORMAT)
+        node = Node(page_id=UInt32(1), leaf=True, keys=[b"k"],
+                    values=[b"v" * (PAGE_SIZE - overhead - 1)], children_ids=[])
+        data = PageSerializer.serialize(node)
+        assert PageSerializer.deserialize(UInt32(1), data) == node
+
+    def test_one_byte_too_large_is_rejected(self) -> None:
+        overhead = PAGE_HEADER_SIZE + SLOT_SIZE + struct.calcsize(LEAF_RECORD_HEADER_FORMAT)
+        node = Node(page_id=UInt32(1), leaf=True, keys=[b"k"],
+                    values=[b"v" * (PAGE_SIZE - overhead)], children_ids=[])
+        with pytest.raises(SerializationError):
+            PageSerializer.serialize(node)
+
+    def test_internal_rejects_mismatched_keys_and_children(self) -> None:
+        node = Node(page_id=UInt32(1), leaf=False, keys=[b"k"], values=[],
+                    children_ids=[])
+        with pytest.raises(SerializationError):
+            PageSerializer.serialize(node)
+
+
 
 
 class TestMetadataSerializer:
