@@ -253,12 +253,12 @@ class TestPageSerializer:
 
     def test_slot_pointing_into_slot_dirctory_is_rejected(self) -> None:
         node = Node(
-                page_id=UInt32(1),
-                leaf=True,
-                keys=[b"k"],
-                values=[b"v"],
-                children_ids=[],
-                )
+            page_id=UInt32(1),
+            leaf=True,
+            keys=[b"k"],
+            values=[b"v"],
+            children_ids=[],
+        )
 
         data = bytearray(PageSerializer.serialize(node))
         # make slot points inside the wrong position (in the slot dirctory)
@@ -267,26 +267,39 @@ class TestPageSerializer:
             PageSerializer.deserialize(UInt32(1), bytes(data))
 
     def test_exactly_full_page_round_trips(self) -> None:
-        overhead = PAGE_HEADER_SIZE + SLOT_SIZE + struct.calcsize(LEAF_RECORD_HEADER_FORMAT)
-        node = Node(page_id=UInt32(1), leaf=True, keys=[b"k"],
-                    values=[b"v" * (PAGE_SIZE - overhead - 1)], children_ids=[])
+        overhead = (
+            PAGE_HEADER_SIZE + SLOT_SIZE + struct.calcsize(LEAF_RECORD_HEADER_FORMAT)
+        )
+        node = Node(
+            page_id=UInt32(1),
+            leaf=True,
+            keys=[b"k"],
+            values=[b"v" * (PAGE_SIZE - overhead - 1)],
+            children_ids=[],
+        )
         data = PageSerializer.serialize(node)
         assert PageSerializer.deserialize(UInt32(1), data) == node
 
     def test_one_byte_too_large_is_rejected(self) -> None:
-        overhead = PAGE_HEADER_SIZE + SLOT_SIZE + struct.calcsize(LEAF_RECORD_HEADER_FORMAT)
-        node = Node(page_id=UInt32(1), leaf=True, keys=[b"k"],
-                    values=[b"v" * (PAGE_SIZE - overhead)], children_ids=[])
+        overhead = (
+            PAGE_HEADER_SIZE + SLOT_SIZE + struct.calcsize(LEAF_RECORD_HEADER_FORMAT)
+        )
+        node = Node(
+            page_id=UInt32(1),
+            leaf=True,
+            keys=[b"k"],
+            values=[b"v" * (PAGE_SIZE - overhead)],
+            children_ids=[],
+        )
         with pytest.raises(SerializationError):
             PageSerializer.serialize(node)
 
     def test_internal_rejects_mismatched_keys_and_children(self) -> None:
-        node = Node(page_id=UInt32(1), leaf=False, keys=[b"k"], values=[],
-                    children_ids=[])
+        node = Node(
+            page_id=UInt32(1), leaf=False, keys=[b"k"], values=[], children_ids=[]
+        )
         with pytest.raises(SerializationError):
             PageSerializer.serialize(node)
-
-
 
 
 class TestMetadataSerializer:

@@ -1,6 +1,7 @@
 """SeriousDB's own custom types."""
 
 from typing import Self, SupportsIndex
+import operator
 
 
 class UInt(int):
@@ -10,15 +11,14 @@ class UInt(int):
 
     def __new__(cls, value: SupportsIndex) -> Self:
         """Create an unsigned integer after validating its range."""
-        value = int(value)
+        # changed from value = int(value) beause int silently truncate floating points
+        value = operator.index(value)
 
         if value < 0:
             raise ValueError("unsigned integers cannot be negative")
 
         if value > cls.MAX:
-            raise ValueError(
-                f"integer overflow. maxmimum for {cls.__name__}: {cls.MAX}"
-            )
+            raise ValueError(f"integer overflow. maximum for {cls.__name__}: {cls.MAX}")
 
         return super().__new__(cls, value)
 
