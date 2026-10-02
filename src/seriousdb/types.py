@@ -1,7 +1,7 @@
 """SeriousDB's own custom types."""
 
-from typing import Self, SupportsIndex
 import operator
+from typing import Self, SupportsIndex
 
 
 class UInt(int):

@@ -6,7 +6,7 @@ import struct
 from typing import Final, cast
 
 from seriousdb.exceptions import SerializationError
-from seriousdb.types import UInt16, UInt32, UInt8
+from seriousdb.types import UInt8, UInt16, UInt32
 
 from .storage_format import (
     FORMAT_VERSION,
@@ -271,7 +271,7 @@ class PageSerializer:
 
         Parameters
         ----------
-        metadata : DatabaseMetadata
+        metadata : SdbMetadata
             Database metadata to serialize.
 
         Returns
@@ -318,7 +318,7 @@ class PageSerializer:
 
         Returns
         -------
-        DatabaseMetadata
+        SdbMetadata
             Deserialized database metadata.
 
         Raises

@@ -18,7 +18,7 @@ from seriousdb.storage_format import (
     Node,
     SdbMetadata,
 )
-from seriousdb.types import UInt16, UInt32, UInt8
+from seriousdb.types import UInt8, UInt16, UInt32
 
 
 class TestPageSerializer:

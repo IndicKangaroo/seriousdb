@@ -6,7 +6,7 @@ import struct
 from dataclasses import dataclass, field
 from typing import Final
 
-from seriousdb.types import UInt16, UInt32, UInt8
+from seriousdb.types import UInt8, UInt16, UInt32
 
 # -----------------------------------
 # Database format
