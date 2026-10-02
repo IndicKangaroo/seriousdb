@@ -220,7 +220,7 @@ class PageSerializer:
             free_end,
         )
 
-        slots: list[Slot] = cls._read_slots(data, slot_count)
+        slots: list[Slot] = cls._read_slots(data, slot_count, free_end)
 
         keys: list[bytes] = []
         if page_type == LEAF_PAGE:
@@ -480,6 +480,7 @@ class PageSerializer:
         cls,
         data: bytes,
         slot_count: int,
+        free_end: int,
     ) -> list[Slot]:
         """Read the slot directory from a page."""
         slots: list[Slot] = []
@@ -495,10 +496,7 @@ class PageSerializer:
                 ),
             )
 
-            if (
-                record_offset < PAGE_HEADER_SIZE
-                or record_offset + record_length > PAGE_SIZE
-            ):
+            if record_offset < free_end or record_offset + record_length > PAGE_SIZE:
                 raise SerializationError("slot points outside the page")
 
             slots.append(
