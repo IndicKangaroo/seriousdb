@@ -25,6 +25,12 @@ class ApplicationError(Exception):
         super().__init__(self.detail)
 
 
+class SerializationError(ApplicationError):
+    """A storage page cannot be serialized or deserialized."""
+
+    default_detail = "The storage page could not be serialized or deserialized"
+
+
 class ResourceNotFoundError(ApplicationError):
     """A requested resource does not exist."""
 
