@@ -42,6 +42,7 @@ class ServiceUnavailableError(ApplicationError):
 
     default_detail = "The service is temporarily unavailable"
 
+
 class DiskManagerError(ApplicationError):
     """A raw page read, write or allocation on the database file failed."""
 
