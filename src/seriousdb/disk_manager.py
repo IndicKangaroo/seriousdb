@@ -1,4 +1,4 @@
-"""Raw fixed-size page I/O on the ``.sdb`` database file."""
+#Raw fixed-size page I/O on the .sdb database file.
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ _O_BINARY = getattr(os, "O_BINARY", 0)
 class DiskManager:
     """Read and write fixed-size pages of the database file by page ID.
 
-    Page ``n`` is stored at byte offset ``n * PAGE_SIZE``. This class does raw
+    Page n is stored at byte offset n * PAGE_SIZE. This class does raw
     page I/O only: it knows nothing about page contents, and locking is left
     to the concurrency manager.
 
@@ -34,19 +34,19 @@ class DiskManager:
     path : str or Path
         Database file, created if missing.
     repair_torn_page : bool, optional
-        Truncate a partial last page instead of raising. Default ``False``.
+        Truncate a partial last page instead of raising. Default False.
 
     Raises
     ------
     DiskManagerError
-        If the file size is not a multiple of ``PAGE_SIZE`` and
+        If the file size is not a multiple of PAGE_SIZE and
         `repair_torn_page` is false.
     OSError
         If the file cannot be opened.
 
     Notes
     -----
-    A new file is empty, so the first :meth:`allocate_page` returns 0 and the
+    A new file is empty, so the first :meth:allocate_page returns 0 and the
     caller must write the metadata page there.
     """
 
@@ -82,12 +82,12 @@ class DiskManager:
         return os.fstat(self._require_open()).st_size // PAGE_SIZE
 
     def read_page(self, page_id: SupportsIndex) -> bytes:
-        """Return the ``PAGE_SIZE`` bytes of page `page_id`.
+        """Return the PAGE_SIZE bytes of page page_id.
 
         Raises
         ------
         DiskManagerError
-            If `page_id` is out of range, the file is closed, or the file
+            If page_id is out of range, the file is closed, or the file
             ends before a full page could be read.
         """
         fd = self._require_open()
@@ -101,14 +101,14 @@ class DiskManager:
         return bytes(buf)
 
     def write_page(self, page_id: SupportsIndex, data: bytes) -> None:
-        """Overwrite the existing page `page_id` with `data`.
+        """Overwrite the existing page page_id with data.
 
-        Not fsynced; call :meth:`sync` when the write must be durable.
+        Not fsynced; call :meth: sync when the write must be durable.
 
         Raises
         ------
         DiskManagerError
-            If `data` is not exactly ``PAGE_SIZE`` bytes, `page_id` has not
+            If data is not exactly PAGE_SIZE bytes, page_id has not
             been allocated, or the file is closed.
         """
         fd = self._require_open()
@@ -128,7 +128,7 @@ class DiskManager:
         Raises
         ------
         DiskManagerError
-            If the file is closed or page IDs would exceed the ``UInt32`` range.
+            If the file is closed or page IDs would exceed the UInt32 range.
         """
         fd = self._require_open()
         with self._lock:
@@ -139,7 +139,7 @@ class DiskManager:
             return UInt32(count)
 
     def sync(self) -> None:
-        """Flush file contents and size to stable storage (``fsync``)."""
+        """Flush file contents and size to stable storage (fsync)."""
         os.fsync(self._require_open())
 
     def close(self) -> None:
@@ -154,7 +154,7 @@ class DiskManager:
         return self
 
     def __exit__(self, *exc_info: object) -> None:
-        """Close the file when leaving the ``with`` block."""
+        """Close the file when leaving the with block."""
         self.close()
 
     def _require_open(self) -> int:
