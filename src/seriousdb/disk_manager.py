@@ -1,12 +1,10 @@
-#Raw fixed-size page I/O on the .sdb database file.
+"""Raw fixed-size page I/O on the .sdb database file."""
 
 from __future__ import annotations
 
-import operator
 import os
 from pathlib import Path
 from threading import RLock
-from typing import Self, SupportsIndex
 
 from .exceptions import DiskManagerError
 from .storage_format import PAGE_SIZE
