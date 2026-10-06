@@ -40,7 +40,7 @@ class DiskManager:
     ------
     DiskManagerError
         If the file size is not a multiple of PAGE_SIZE and
-        `repair_torn_page` is false.
+        repair_torn_page is false.
     OSError
         If the file cannot be opened.
 
@@ -50,7 +50,7 @@ class DiskManager:
     caller must write the metadata page there.
     """
 
-    def __init__(self, path: str | Path, *, repair_torn_page: bool = False) -> None:
+    def __init__(self, path: str | Path, *, repair_torn_page: bool = False):
         self._path = Path(path)
         self._lock = RLock()
         self._fd: int | None = None
@@ -72,16 +72,16 @@ class DiskManager:
         self._fd = fd
 
     @property
-    def path(self) -> Path:
+    def path(self):
         """Path of the database file."""
         return self._path
 
     @property
-    def page_count(self) -> int:
+    def page_count(self):
         """Number of whole pages in the file, read from the file size."""
         return os.fstat(self._require_open()).st_size // PAGE_SIZE
 
-    def read_page(self, page_id: SupportsIndex) -> bytes:
+    def read_page(self, page_id: UInt32):
         """Return the PAGE_SIZE bytes of page page_id.
 
         Raises
@@ -100,10 +100,10 @@ class DiskManager:
             buf += chunk
         return bytes(buf)
 
-    def write_page(self, page_id: SupportsIndex, data: bytes) -> None:
+    def write_page(self, page_id: UInt32, data: bytes):
         """Overwrite the existing page page_id with data.
 
-        Not fsynced; call :meth: sync when the write must be durable.
+        Not fsynced; call :meth:sync when the write must be durable.
 
         Raises
         ------
@@ -118,11 +118,11 @@ class DiskManager:
             )
         self._write_all(fd, data, self._offset(fd, page_id))
 
-    def allocate_page(self) -> UInt32:
+    def allocate_page(self):
         """Allocate a new page at the end of the file and return its ID.
 
         The page is zero-filled. Reusing freed pages is the caller's job.
-        Not fsynced; call :meth:`sync` before relying on the new size after
+        Not fsynced; call :meth:sync before relying on the new size after
         a crash.
 
         Raises
@@ -138,48 +138,44 @@ class DiskManager:
             self._write_all(fd, bytes(PAGE_SIZE), count * PAGE_SIZE)
             return UInt32(count)
 
-    def sync(self) -> None:
+    def sync(self):
         """Flush file contents and size to stable storage (fsync)."""
         os.fsync(self._require_open())
 
-    def close(self) -> None:
+    def close(self):
         """Close the file. Safe to call more than once."""
         with self._lock:
             if self._fd is not None:
                 os.close(self._fd)
                 self._fd = None
 
-    def __enter__(self) -> Self:
+    def __enter__(self):
         """Return the manager for use in a ``with`` block."""
         return self
 
-    def __exit__(self, *exc_info: object) -> None:
-        """Close the file when leaving the with block."""
+    def __exit__(self, *exc_info: object):
+        """Close the file when leaving the ``with`` block."""
         self.close()
 
-    def _require_open(self) -> int:
+    def _require_open(self):
         if self._fd is None:
             raise DiskManagerError("the database file is closed")
         return self._fd
 
-    def _offset(self, fd: int, page_id: SupportsIndex) -> int:
-        try:
-            pid = operator.index(page_id)
-        except TypeError as e:
-            raise DiskManagerError(f"invalid page ID: {page_id!r}") from e
+    def _offset(self, fd: int, page_id: UInt32):
         count = os.fstat(fd).st_size // PAGE_SIZE
-        if not 0 <= pid < count:
-            raise DiskManagerError(f"page {pid} is out of range (0..{count - 1})")
-        return pid * PAGE_SIZE
+        if not 0 <= page_id < count:
+            raise DiskManagerError(f"page {page_id} is out of range (0..{count - 1})")
+        return page_id * PAGE_SIZE
 
-    def _read_at(self, fd: int, size: int, offset: int) -> bytes:
+    def _read_at(self, fd: int, size: int, offset: int):
         if _pread is not None:
             return _pread(fd, size, offset)
         with self._lock:  # seek + read must be atomic without pread
             os.lseek(fd, offset, os.SEEK_SET)
             return os.read(fd, size)
 
-    def _write_all(self, fd: int, data: bytes, offset: int) -> None:
+    def _write_all(self, fd: int, data: bytes, offset: int):
         view = memoryview(data)
         written = 0
         while written < len(view):

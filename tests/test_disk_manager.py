@@ -6,6 +6,7 @@ from seriousdb import disk_manager
 from seriousdb.disk_manager import DiskManager
 from seriousdb.exceptions import DiskManagerError
 from seriousdb.storage_format import PAGE_SIZE
+from seriousdb.types import UInt32
 
 
 @pytest.fixture
@@ -33,7 +34,11 @@ def test_round_trip_and_reopen(path):
         dm.sync()
     with DiskManager(path) as dm:
         assert dm.page_count == 3
-        assert [dm.read_page(i) for i in range(3)] == [page(1), page(2), page(3)]
+        assert [dm.read_page(UInt32(i)) for i in range(3)] == [
+            page(1),
+            page(2),
+            page(3),
+        ]
 
 
 def test_fresh_page_is_zeroed(path):
@@ -53,8 +58,8 @@ def test_repair_truncates_only_the_torn_tail(path):
     path.write_bytes(page(7) + page(8) + b"x" * 100)
     with DiskManager(path, repair_torn_page=True) as dm:
         assert dm.page_count == 2
-        assert dm.read_page(0) == page(7)
-        assert dm.read_page(1) == page(8)
+        assert dm.read_page(UInt32(0)) == page(7)
+        assert dm.read_page(UInt32(1)) == page(8)
     assert path.stat().st_size == 2 * PAGE_SIZE
 
 
@@ -63,11 +68,11 @@ def test_wrong_size_write_rejected(path, size):
     with DiskManager(path) as dm:
         dm.allocate_page()
         with pytest.raises(DiskManagerError):
-            dm.write_page(0, bytes(size))
+            dm.write_page(UInt32(0), bytes(size))
 
 
-@pytest.mark.parametrize("bad", [-1, 1, 99, "0", 1.5])
-def test_bad_page_id_rejected(path, bad):
+@pytest.mark.parametrize("bad", [UInt32(1), UInt32(99), UInt32(UInt32.MAX)])
+def test_out_of_range_page_id_rejected(path, bad):
     with DiskManager(path) as dm:
         dm.allocate_page()
         with pytest.raises(DiskManagerError):
@@ -79,7 +84,7 @@ def test_bad_page_id_rejected(path, bad):
 def test_write_never_grows_file(path):
     with DiskManager(path) as dm:
         with pytest.raises(DiskManagerError):
-            dm.write_page(0, bytes(PAGE_SIZE))
+            dm.write_page(UInt32(0), bytes(PAGE_SIZE))
         assert dm.page_count == 0
 
 
@@ -87,7 +92,7 @@ def test_use_after_close_raises(path):
     dm = DiskManager(path)
     dm.close()
     dm.close()  # idempotent
-    for call in (dm.allocate_page, dm.sync, lambda: dm.read_page(0)):
+    for call in (dm.allocate_page, dm.sync, lambda: dm.read_page(UInt32(0))):
         with pytest.raises(DiskManagerError):
             call()
 
@@ -96,7 +101,7 @@ def test_page_count_sees_other_handles_appends(path):
     with DiskManager(path) as a, DiskManager(path) as b:
         a.allocate_page()
         assert b.page_count == 1
-        assert b.read_page(0) == bytes(PAGE_SIZE)
+        assert b.read_page(UInt32(0)) == bytes(PAGE_SIZE)
 
 
 @pytest.mark.skipif(disk_manager._pread is None, reason="needs os.pread")
@@ -108,7 +113,7 @@ def test_short_reads_are_retried(path, monkeypatch):
     )
     with DiskManager(path) as dm:
         dm.write_page(dm.allocate_page(), page(5))
-        assert dm.read_page(0) == page(5)
+        assert dm.read_page(UInt32(0)) == page(5)
 
 
 @pytest.mark.skipif(disk_manager._pwrite is None, reason="needs os.pwrite")
@@ -120,7 +125,7 @@ def test_short_writes_are_retried(path, monkeypatch):
     )
     with DiskManager(path) as dm:
         dm.write_page(dm.allocate_page(), page(9))
-        assert dm.read_page(0) == page(9)
+        assert dm.read_page(UInt32(0)) == page(9)
     assert path.read_bytes() == page(9)
 
 
@@ -130,7 +135,7 @@ def test_eof_mid_page_raises(path, monkeypatch):
         dm.allocate_page()
         monkeypatch.setattr(disk_manager, "_pread", lambda fd, n, off: b"")
         with pytest.raises(DiskManagerError):
-            dm.read_page(0)
+            dm.read_page(UInt32(0))
 
 
 def test_concurrent_allocations_get_unique_ids(path):
