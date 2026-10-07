@@ -1,4 +1,4 @@
-"""Raw fixed-size page I/O on the .sdb database file."""
+"""Raw fixed-size page I/O on the ``.sdb`` database file."""
 
 from __future__ import annotations
 
@@ -52,6 +52,7 @@ class DiskManager:
         self._path = Path(path)
         self._lock = RLock()
         self._fd: int | None = None
+        self._known_pages = 0
         fd = os.open(self._path, os.O_RDWR | os.O_CREAT | _O_BINARY, 0o644)
         try:
             size = os.fstat(fd).st_size
@@ -62,8 +63,10 @@ class DiskManager:
                         f"{self._path} is {size} bytes, not a multiple of "
                         f"{PAGE_SIZE}; the last page is incomplete"
                     )
-                os.ftruncate(fd, size - tail)
+                size -= tail
+                os.ftruncate(fd, size)
                 os.fsync(fd)
+            self._known_pages = size // PAGE_SIZE
         except BaseException:
             os.close(fd)
             raise
@@ -77,7 +80,7 @@ class DiskManager:
     @property
     def page_count(self) -> int:
         """Number of whole pages in the file, read from the file size."""
-        return os.fstat(self._require_open()).st_size // PAGE_SIZE
+        return self._refresh_page_count(self._require_open())
 
     def read_page(self, page_id: UInt32) -> bytes:
         """Return the PAGE_SIZE`` bytes of page page_id.
@@ -130,10 +133,11 @@ class DiskManager:
         """
         fd = self._require_open()
         with self._lock:
-            count = os.fstat(fd).st_size // PAGE_SIZE
+            count = self._refresh_page_count(fd)
             if count > UInt32.MAX:
                 raise DiskManagerError("page ID would exceed the UInt32 range")
             self._write_all(fd, bytes(PAGE_SIZE), count * PAGE_SIZE)
+            self._known_pages = count + 1
             return UInt32(count)
 
     def sync(self) -> None:
@@ -160,10 +164,21 @@ class DiskManager:
             raise DiskManagerError("the database file is closed")
         return self._fd
 
-    def _offset(self, fd: int, page_id: UInt32) -> int:
+    def _refresh_page_count(self, fd: int) -> int:
         count = os.fstat(fd).st_size // PAGE_SIZE
-        if not 0 <= page_id < count:
-            raise DiskManagerError(f"page {page_id} is out of range (0..{count - 1})")
+        self._known_pages = max(self._known_pages, count)
+        return count
+
+    def _offset(self, fd: int, page_id: UInt32) -> int:
+        # The file only grows while open, so the cached count is a lower
+        # bound: re-read the file size only when an ID is beyond it, which
+        # also picks up pages another handle allocated.
+        if page_id >= self._known_pages:
+            self._refresh_page_count(fd)
+        if not 0 <= page_id < self._known_pages:
+            raise DiskManagerError(
+                f"page {page_id} is out of range (0..{self._known_pages - 1})"
+            )
         return page_id * PAGE_SIZE
 
     def _read_at(self, fd: int, size: int, offset: int) -> bytes:

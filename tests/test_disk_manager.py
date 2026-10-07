@@ -88,6 +88,27 @@ def test_write_never_grows_file(path):
         assert dm.page_count == 0
 
 
+def test_in_range_io_does_not_call_fstat(path, monkeypatch):
+    with DiskManager(path) as dm:
+        dm.write_page(dm.allocate_page(), page(1))
+        calls: list[int] = []
+        real = disk_manager.os.fstat
+        monkeypatch.setattr(
+            disk_manager.os, "fstat", lambda fd: calls.append(fd) or real(fd)
+        )
+        dm.read_page(UInt32(0))
+        dm.write_page(UInt32(0), page(2))
+        assert calls == []
+
+
+def test_page_allocated_by_another_handle_is_readable(path):
+    with DiskManager(path) as a, DiskManager(path) as b:
+        a.write_page(a.allocate_page(), page(4))
+        assert b.read_page(UInt32(0)) == page(4)
+        with pytest.raises(DiskManagerError):
+            b.read_page(UInt32(1))
+
+
 def test_use_after_close_raises(path):
     dm = DiskManager(path)
     dm.close()
@@ -154,4 +175,3 @@ def test_concurrent_allocations_get_unique_ids(path):
             t.join()
         assert sorted(ids) == list(range(200))
         assert dm.page_count == 200
-
