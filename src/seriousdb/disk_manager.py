@@ -79,8 +79,13 @@ class DiskManager:
         """Number of whole pages in the file, read from the file size."""
         return os.fstat(self._require_open()).st_size // PAGE_SIZE
 
+<<<<<<< HEAD
     def read_page(self, page_id: UInt32):
         """Return the PAGE_SIZE bytes of page page_id.
+=======
+    def read_page(self, page_id: UInt32) -> bytes:
+        """Return the PAGE_SIZE`` bytes of page page_id.
+>>>>>>> 06519f2 (format+generated exception refrence doc)
 
         Raises
         ------
@@ -98,7 +103,11 @@ class DiskManager:
             buf += chunk
         return bytes(buf)
 
+<<<<<<< HEAD
     def write_page(self, page_id: UInt32, data: bytes):
+=======
+    def write_page(self, page_id: UInt32, data: bytes) -> None:
+>>>>>>> 06519f2 (format+generated exception refrence doc)
         """Overwrite the existing page page_id with data.
 
         Not fsynced; call :meth:sync when the write must be durable.
@@ -151,7 +160,11 @@ class DiskManager:
         """Return the manager for use in a ``with`` block."""
         return self
 
+<<<<<<< HEAD
     def __exit__(self, *exc_info: object):
+=======
+    def __exit__(self, *exc_info: object) -> None:
+>>>>>>> 06519f2 (format+generated exception refrence doc)
         """Close the file when leaving the ``with`` block."""
         self.close()
 
@@ -160,7 +173,11 @@ class DiskManager:
             raise DiskManagerError("the database file is closed")
         return self._fd
 
+<<<<<<< HEAD
     def _offset(self, fd: int, page_id: UInt32):
+=======
+    def _offset(self, fd: int, page_id: UInt32) -> int:
+>>>>>>> 06519f2 (format+generated exception refrence doc)
         count = os.fstat(fd).st_size // PAGE_SIZE
         if not 0 <= page_id < count:
             raise DiskManagerError(f"page {page_id} is out of range (0..{count - 1})")
