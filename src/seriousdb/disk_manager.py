@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from threading import RLock
+from typing import Self
 
 from .exceptions import DiskManagerError
 from .storage_format import PAGE_SIZE
@@ -53,6 +56,7 @@ class DiskManager:
         self._lock = RLock()
         self._fd: int | None = None
         self._known_pages = 0
+        self._active = 0  # I/O calls currently using the fd
         fd = os.open(self._path, os.O_RDWR | os.O_CREAT | _O_BINARY, 0o644)
         try:
             size = os.fstat(fd).st_size
@@ -80,7 +84,8 @@ class DiskManager:
     @property
     def page_count(self) -> int:
         """Number of whole pages in the file, read from the file size."""
-        return self._refresh_page_count(self._require_open())
+        with self._in_flight() as fd:
+            return self._refresh_page_count(fd)
 
     def read_page(self, page_id: UInt32) -> bytes:
         """Return the PAGE_SIZE`` bytes of page page_id.
@@ -91,15 +96,17 @@ class DiskManager:
             If page_id is out of range, the file is closed, or the file
             ends before a full page could be read.
         """
-        fd = self._require_open()
-        offset = self._offset(fd, page_id)
-        buf = bytearray()
-        while len(buf) < PAGE_SIZE:
-            chunk = self._read_at(fd, PAGE_SIZE - len(buf), offset + len(buf))
-            if not chunk:
-                raise DiskManagerError(f"unexpected end of file reading page {page_id}")
-            buf += chunk
-        return bytes(buf)
+        with self._in_flight() as fd:
+            offset = self._offset(fd, page_id)
+            buf = bytearray()
+            while len(buf) < PAGE_SIZE:
+                chunk = self._read_at(fd, PAGE_SIZE - len(buf), offset + len(buf))
+                if not chunk:
+                    raise DiskManagerError(
+                        f"unexpected end of file reading page {page_id}"
+                    )
+                buf += chunk
+            return bytes(buf)
 
     def write_page(self, page_id: UInt32, data: bytes) -> None:
         """Overwrite the existing page page_id with data.
@@ -112,12 +119,12 @@ class DiskManager:
             If data is not exactly PAGE_SIZE bytes, page_id has not
             been allocated, or the file is closed.
         """
-        fd = self._require_open()
         if len(data) != PAGE_SIZE:
             raise DiskManagerError(
                 f"page data must be {PAGE_SIZE} bytes, got {len(data)}"
             )
-        self._write_all(fd, data, self._offset(fd, page_id))
+        with self._in_flight() as fd:
+            self._write_all(fd, data, self._offset(fd, page_id))
 
     def allocate_page(self) -> UInt32:
         """Allocate a new page at the end of the file and return its ID.
@@ -131,8 +138,7 @@ class DiskManager:
         DiskManagerError
             If the file is closed or page IDs would exceed the UInt32 range.
         """
-        fd = self._require_open()
-        with self._lock:
+        with self._in_flight() as fd, self._lock:
             count = self._refresh_page_count(fd)
             if count > UInt32.MAX:
                 raise DiskManagerError("page ID would exceed the UInt32 range")
@@ -142,22 +148,43 @@ class DiskManager:
 
     def sync(self) -> None:
         """Flush file contents and size to stable storage (fsync)."""
-        os.fsync(self._require_open())
+        with self._in_flight() as fd:
+            os.fsync(fd)
 
     def close(self) -> None:
-        """Close the file. Safe to call more than once."""
+        """Close the file. Safe to call more than once.
+
+        Raises
+        ------
+        DiskManagerError
+            If a read, write, allocation or sync is still running.
+        """
         with self._lock:
+            if self._active:
+                raise DiskManagerError("cannot close while I/O is in progress")
             if self._fd is not None:
                 os.close(self._fd)
                 self._fd = None
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Return the manager for use in a ``with`` block."""
         return self
 
     def __exit__(self, *exc_info: object) -> None:
         """Close the file when leaving the ``with`` block."""
         self.close()
+
+    @contextmanager
+    def _in_flight(self) -> Iterator[int]:
+        # Counts the call as running so close() cannot free the fd under it.
+        with self._lock:
+            fd = self._require_open()
+            self._active += 1
+        try:
+            yield fd
+        finally:
+            with self._lock:
+                self._active -= 1
 
     def _require_open(self) -> int:
         if self._fd is None:
@@ -201,4 +228,3 @@ class DiskManager:
             if n <= 0:
                 raise DiskManagerError("write made no progress")
             written += n
-

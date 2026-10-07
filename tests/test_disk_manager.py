@@ -109,6 +109,30 @@ def test_page_allocated_by_another_handle_is_readable(path):
             b.read_page(UInt32(1))
 
 
+def test_close_during_io_raises(path, monkeypatch):
+    with DiskManager(path) as dm:
+        dm.write_page(dm.allocate_page(), page(1))
+        real = dm._read_at
+
+        def read_at(fd, size, offset):
+            with pytest.raises(DiskManagerError):
+                dm.close()
+            return real(fd, size, offset)
+
+        monkeypatch.setattr(dm, "_read_at", read_at)
+        assert dm.read_page(UInt32(0)) == page(1)
+    # The with-block closed it, so no I/O call leaked its in-flight count.
+    with pytest.raises(DiskManagerError):
+        dm.read_page(UInt32(0))
+
+
+def test_failed_io_does_not_block_close(path):
+    dm = DiskManager(path)
+    with pytest.raises(DiskManagerError):
+        dm.read_page(UInt32(5))
+    dm.close()
+
+
 def test_use_after_close_raises(path):
     dm = DiskManager(path)
     dm.close()
