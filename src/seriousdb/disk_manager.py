@@ -186,3 +186,4 @@ class DiskManager:
             if n <= 0:
                 raise DiskManagerError("write made no progress")
             written += n
+

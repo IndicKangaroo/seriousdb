@@ -154,3 +154,4 @@ def test_concurrent_allocations_get_unique_ids(path):
             t.join()
         assert sorted(ids) == list(range(200))
         assert dm.page_count == 200
+
